@@ -182,7 +182,7 @@ bool NOX::LineSearch::Polynomial::compute(Abstract::Group& newGrp,
   double newPhi = meritFuncPtr->computef(newGrp);
   double newValue = computeValue(newGrp, newPhi);
 
-  bool isConverged = false;
+  int isConverged = 1;
   bool isFailed = false;
   int nIters = 1;
 
@@ -196,15 +196,16 @@ bool NOX::LineSearch::Polynomial::compute(Abstract::Group& newGrp,
                    eta, nIters, nNonlinearIters);
 
   // Increment the number of newton steps requiring a line search
-  if ((useCounter) && (!isConverged))
+  if ((useCounter) && (isConverged != 0))
     counter.incrementNumNonTrivialLineSearches();
 
   double prevPhi = 0.0;        // \phi(\lambda_{k-1})
   double prevPrevPhi = 0.0;    // \phi(\lambda_{k-2})
   double prevStep = 0.0;    // \lambda_{k-1}
   double prevPrevStep = 0.0;    // \lambda_{k-2}
+  bool needPrevPrevVals = true;
 
-  while ((!isConverged) && (!isFailed))
+  while ((isConverged != 0) && (!isFailed))
   {
     print.printStep(nIters, step, oldValue, newValue,
             "", (suffDecrCond != AredPred));
@@ -215,7 +216,14 @@ bool NOX::LineSearch::Polynomial::compute(Abstract::Group& newGrp,
       break;
     }
 
-    if (interpolationType == Quadratic3)
+    if (isConverged == -1)
+    {
+      /* Backtracking to address nans */
+      double reductionFactor = (maxBoundFactor < 1.0) ? maxBoundFactor : 0.5;
+      prevStep = step;
+      step = reductionFactor * step;
+    }
+    else if (interpolationType == Quadratic3)
     {
       /* 3-Point Quadratic Interpolation */
 
@@ -224,8 +232,9 @@ bool NOX::LineSearch::Polynomial::compute(Abstract::Group& newGrp,
       prevPrevStep = prevStep;
       prevStep = step;
 
-      if (nIters == 1)
+      if (needPrevPrevVals)
       {
+    needPrevPrevVals = false;
     step = 0.5 * step;
       }
       else
@@ -240,16 +249,16 @@ bool NOX::LineSearch::Polynomial::compute(Abstract::Group& newGrp,
       }
     }
 
-    else if ((nIters == 1) || (interpolationType == Quadratic))
+    else if ((needPrevPrevVals) || (interpolationType == Quadratic))
     {
       /* Quadratic Interpolation */
 
+      needPrevPrevVals = false;
       prevPhi = newPhi;
       prevStep = step;
 
       step = - (oldSlope * prevStep * prevStep) /
     (2.0 * (prevPhi - oldPhi - prevStep * oldSlope)) ;
-
     }
 
     else
@@ -359,7 +368,7 @@ bool NOX::LineSearch::Polynomial::compute(Abstract::Group& newGrp,
   return (!isFailed);
 }
 
-bool NOX::LineSearch::Polynomial::
+int NOX::LineSearch::Polynomial::
 checkConvergence(double newValue, double oldValue,
          double oldSlope,
          double step, double eta,
@@ -368,16 +377,16 @@ checkConvergence(double newValue, double oldValue,
 {
   NOX::StatusTest::FiniteValue checkNAN;
   if (checkNAN.finiteNumberTest(newValue) !=0)
-    return false;
+    return -1;
 
   if ((nIters == 1) && (doForceInterpolation))
-    return false;
+    return 1;
 
   if ((doAllowIncrease) && (nNonlinearIters <= maxIncreaseIter))
   {
     double relativeIncrease = newValue / oldValue;
     if (relativeIncrease < maxRelativeIncrease)
-      return true;
+      return 0;
   }
 
   bool returnVal = false;
@@ -402,7 +411,7 @@ checkConvergence(double newValue, double oldValue,
     throw "NOX Error";
 
   }
-  return returnVal;
+  return returnVal ? 0 : 1;
 }
 
 bool NOX::LineSearch::Polynomial::

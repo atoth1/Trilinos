@@ -355,11 +355,13 @@ protected:
 
     <ol>
 
+    <li> If newValue is a nan, then we return \b -1.
+
     <li> If the "Force Interpolation" parameter is true and this is the
-    first inner iteration (i.e., nIters is 1), then we return \b false.
+    first inner iteration (i.e., nIters is 1), then we return \b 1.
 
     <li> Next, it checks to see if the "Relative Increase" condition
-    is satisfied. If so, then we return \b true.  The "Relative
+    is satisfied. If so, then we return \b 0.  The "Relative
     Increase" condition is satisfied if \e both of the following two
     conditions hold.
 
@@ -371,7 +373,7 @@ protected:
        specified in "Allowed Relative Increase".
 
     <li> Last, we check the sufficient decrease condition. We return
-    \b true if it's satisfied, and \b false otherwise. The condition
+    \b 0 if it's satisfied, and \b 1 otherwise. The condition
     depends on the value of "Sufficient Decrease Condition",
     as follows.
 
@@ -387,7 +389,7 @@ protected:
     \f]
 
 
-    <li> "None": Always return true.
+    <li> "None": Always return 0.
     </ul>
 
     For the first two cases, \f$\alpha\f$ is specified by the
@@ -427,7 +429,7 @@ protected:
     object derived from NOX::Parameter::UserNorm.
 
   */
-  bool checkConvergence(double newValue, double oldValue, double oldSlope,
+  int checkConvergence(double newValue, double oldValue, double oldSlope,
             double step, double eta, int nIters, int nNonlinearIters) const;
 
   //! Updates the newGrp by computing a new x and a new F(x)
