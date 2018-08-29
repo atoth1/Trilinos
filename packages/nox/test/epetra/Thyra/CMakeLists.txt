@@ -102,4 +102,11 @@ IF(NOX_ENABLE_ABSTRACT_IMPLEMENTATION_THYRA AND
     PASS_REGULAR_EXPRESSION "Test passed!"
     )
 
+  TRIBITS_ADD_EXECUTABLE_AND_TEST(
+    Thyra_NanLineSearch
+    SOURCES ${UNIT_TEST_DRIVER}  ModelEvaluatorBoundedArcTan.hpp ModelEvaluatorBoundedArcTan_def.hpp
+    Thyra_NanLineSearch.C
+    NUM_MPI_PROCS 1
+    )
+
 ENDIF()
